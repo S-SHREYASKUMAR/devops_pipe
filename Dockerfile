@@ -1,9 +1,9 @@
-# Build + run a tiny Java "Hello" container
 FROM eclipse-temurin:21-jdk-jammy
 
 WORKDIR /app
-COPY Hello.java .
 
-RUN javac Hello.java
+COPY HelloWorld.java ./
 
-CMD ["java", "Hello"]
+RUN javac HelloWorld.java
+
+CMD ["java", "HelloWorld"]
