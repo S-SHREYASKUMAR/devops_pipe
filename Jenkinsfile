@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'dock'
+        DOCKERHUB_CREDENTIALS = 'new'
         IMAGE_NAME = 'preeth97/new'
     }
 
@@ -29,7 +29,7 @@ pipeline {
         stage('Login to DockerHub') {
             steps {
                 withCredentials([usernamePassword(
-                credentialsId: 'dock',
+                credentialsId: 'new',
                 usernameVariable: 'USER',
                 passwordVariable: 'PASS')]) {
 
