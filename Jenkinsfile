@@ -1,47 +1,45 @@
 pipeline {
     agent any
-
     environment {
-        DOCKERHUB_CREDENTIALS = 'new'
-        IMAGE_NAME = 'preeth97/new'
+        DOCKER_CREDENTIAL_ID = 'dock'   // matches your Jenkins credential ID
+        IMAGE_NAME = 'preeth97/dock'   // your Docker Hub repo
     }
-
     stages {
-
         stage('Build Java Application') {
             steps {
-                bat 'javac Hello.java'
+                bat 'javac HelloWorld.java'
             }
         }
-
         stage('Run Java Program') {
             steps {
-                bat 'java Hello'
+                bat 'java HelloWorld'
             }
         }
-
         stage('Build Docker Image') {
             steps {
-                bat 'docker build -t %IMAGE_NAME%:latest .'
+                bat "docker build -t ${env.IMAGE_NAME}:latest ."
             }
         }
-
         stage('Login to DockerHub') {
             steps {
                 withCredentials([usernamePassword(
-                credentialsId: 'new',
-                usernameVariable: 'USER',
-                passwordVariable: 'PASS')]) {
-
-                    bat 'echo %PASS% | docker login -u %USER% --password-stdin'
+                    credentialsId: env.DOCKER_CREDENTIAL_ID,
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS'
+                )]) {
+                    bat "docker login -u %USER% -p %PASS%"
                 }
             }
         }
-
         stage('Push Docker Image') {
             steps {
-                bat 'docker push %IMAGE_NAME%:latest'
+                bat "docker push ${env.IMAGE_NAME}:latest"
             }
+        }
+    }
+    post {
+        always {
+            bat 'docker logout'
         }
     }
 }
