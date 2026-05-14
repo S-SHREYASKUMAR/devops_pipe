@@ -1,0 +1,474 @@
+Step 1: Open Eclipse IDE
+
+Start Eclipse IDE.
+
+Step 2: Create Maven Project
+
+Go to:
+
+File → New → Maven Project
+
+Keep checked:
+
+Use default Workspace location
+
+Do NOT check:
+
+Create a simple project (skip archetype selection)
+
+Click:
+
+Next
+Step 3: Select Maven Archetype
+
+Search:
+
+maven-archetype-quickstart
+
+Select:
+
+org.apache.maven.archetypes:maven-archetype-quickstart
+
+Click:
+
+Next
+Step 4: Enter Project Details
+
+Enter:
+
+Group Id    : com.example
+Artifact Id : JsonMavenProject
+Version     : 0.0.1-SNAPSHOT
+
+Click:
+
+Finish
+
+Maven project gets created successfully.
+
+Step 5: Open pom.xml
+
+Open:
+
+pom.xml
+Step 6: Add JSON Dependency
+
+Inside the <dependencies> section add:
+
+<dependency>
+    <groupId>com.googlecode.json-simple</groupId>
+    <artifactId>json-simple</artifactId>
+    <version>1.1.1</version>
+</dependency>
+
+Final <dependencies> section:
+
+<dependencies>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+        <groupId>com.googlecode.json-simple</groupId>
+        <artifactId>json-simple</artifactId>
+        <version>1.1.1</version>
+    </dependency>
+
+</dependencies>
+
+Save using:
+
+Ctrl + S
+Step 7: Update Maven Project
+
+Right-click project:
+
+JsonMavenProject
+
+Select:
+
+Maven → Update Project
+
+Check:
+
+Force Update of Snapshots/Releases
+
+Click:
+
+OK
+
+Wait until dependencies download.
+
+Step 8: Create JSON File
+
+Right-click project:
+
+New → File
+
+File name:
+
+emp.json
+
+Click:
+
+Finish
+Step 9: Add JSON Data
+
+Open emp.json and add:
+
+{
+  "fName": "Aj",
+  "lName": "ML"
+}
+
+Save the file.
+
+Step 10: Open App.java
+
+Go to:
+
+src/main/java
+
+Open:
+
+App.java
+Step 11: Replace Existing Code
+
+Delete existing code and paste:
+
+package com.example.JsonMavenProject;
+
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+
+import java.io.FileReader;
+
+public class App {
+
+    public static void main(String[] args) {
+
+        JSONParser parser = new JSONParser();
+
+        try {
+
+            Object obj = parser.parse(new FileReader("emp.json"));
+
+            JSONObject jsonObject = (JSONObject) obj;
+
+            String fName = (String) jsonObject.get("fName");
+            String lName = (String) jsonObject.get("lName");
+
+            System.out.println("First Name : " + fName);
+            System.out.println("Last Name  : " + lName);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Save using:
+
+Ctrl + S
+Step 12: Run the Program
+
+Right-click:
+
+App.java
+
+Select:
+
+Run As → Java Application
+Output
+First Name : Aj
+Last Name  : ML
+
+
+B2:
+
+Prerequisites (already installed on your system)
+
+· Jenkins running (http://localhost:8080)
+· Docker installed on the Jenkins agent (your Windows machine)
+· Git installed
+· Jenkins plugins: Pipeline, Git, Credentials Binding, Docker Pipeline
+
+---
+
+Step 1: Prepare your Git repository
+
+Create a repository (local or GitHub) with these three files:
+
+HelloWorld.java
+
+```java
+public class HelloWorld {
+    public static void main(String[] args) {
+        System.out.println("Hello from Jenkins!");
+    }
+}
+```
+
+Dockerfile
+
+```dockerfile
+FROM eclipse-temurin:21-jdk
+WORKDIR /app
+COPY HelloWorld.java .
+RUN javac HelloWorld.java
+CMD ["java", "HelloWorld"]
+```
+
+Jenkinsfile (the pipeline definition)
+
+```groovy
+pipeline {
+    agent any
+    environment {
+        DOCKER_CREDENTIAL_ID = 'Docker'   // matches your Jenkins credential ID
+        IMAGE_NAME = ''   // your Docker Hub repo
+    }
+    stages {
+        stage('Build Java Application') {
+            steps {
+                bat 'javac HelloWorld.java'
+            }
+        }
+        stage('Run Java Program') {
+            steps {
+                bat 'java HelloWorld'
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                bat "docker build -t ${env.IMAGE_NAME}:latest ."
+            }
+        }
+        stage('Login to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: env.DOCKER_CREDENTIAL_ID,
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS'
+                )]) {
+                    bat "docker login -u %USER% -p %PASS%"
+                }
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                bat "docker push ${env.IMAGE_NAME}:latest"
+            }
+        }
+    }
+    post {
+        always {
+            bat 'docker logout'
+        }
+    }
+}
+```
+
+---
+
+Step 2: Add Docker Hub credentials in Jenkins
+
+1. Dashboard → Manage Jenkins → Credentials → System → Global credentials → Add Credentials
+2. Kind: Username with password
+3. Username: your Docker Hub username (iamprajwal99)
+4. Password: your Docker Hub password (or access token – recommended)
+5. ID: Docker (exactly as in the Jenkinsfile)
+6. Description: Docker Hub credentials
+7. Click Create
+
+---
+
+Step 3: Create a new Pipeline job in Jenkins
+
+1. Dashboard → New Item
+2. Enter a name: Docker-pipeline (or any name)
+3. Select Pipeline → OK
+4. Under Pipeline section:
+   · Definition: Pipeline script from SCM
+   · SCM: Git
+   · Repository URL: https://github.com/Prajwalgb99/Docker_push.git (or your local repo path)
+   · Branches to build: */main
+   · Script Path: Jenkinsfile
+5. Click Save
+
+---
+
+Step 4: Run the pipeline
+
+· Click Build Now
+· Watch the console output – stages will execute in order:
+  1. Build Java Application – compiles HelloWorld.java
+  2. Run Java Program – prints Hello from Jenkins!
+  3. Build Docker Image – creates image using Dockerfile
+  4. Login to DockerHub – uses stored credentials
+  5. Push Docker Image – pushes iamprajwal99/docker_image:latest
+
+Successful output (as you already saw):
+
+```
+Login Succeeded
+The push refers to repository [docker.io/iamprajwal99/docker_image]
+...
+Finished: SUCCESS
+```
+
+---
+
+Step 5: Verify the image on Docker Hub
+
+· Go to hub.docker.com
+· Log in → Repositories → iamprajwal99/docker_image – you'll see the latest tag.
+
+---
+
+Quick exam notes for B2
+
+Component Purpose
+agent any Run on any available Jenkins agent
+environment Define variables (IMAGE_NAME, credentials ID)
+withCredentials Securely pass Docker Hub username/password
+bat Execute Windows batch commands (javac, docker, etc.)
+post { always } Run docker logout even if build fails
+
+---
+
+If you need to run B2 again (troubleshooting)
+
+· Docker not recognized? → Ensure Docker Desktop is running and Jenkins has permission (add Jenkins user to docker-users group on Windows)
+· Login fails? → Re‑enter credentials in Jenkins; use an access token (not password) if 2FA is enabled on Docker Hub
+· Push fails? → Verify image name exactly matches your Docker Hub username/repo
+
+Your B2 is already working. For the lab, just be ready to explain each stage. Good luck!
+
+
+Let me give you clear, exam-ready steps for B1 (creating a Docker image from a local application and running it).
+
+---
+
+B1: Create Docker image from local app & run it
+
+What you need:
+
+· A simple Java application (e.g., HelloWorld.java)
+· Docker installed and running
+· A Dockerfile
+
+---
+
+Step 1: Create the Java application
+
+Create a folder, e.g., myapp. Inside it, create HelloWorld.java:
+
+```java
+public class HelloWorld {
+    public static void main(String[] args) {
+        System.out.println("Hello from Docker!");
+    }
+}
+```
+
+---
+
+Step 2: Create a Dockerfile (same folder)
+
+Create a file named Dockerfile (no extension) with this content:
+
+```dockerfile
+FROM eclipse-temurin:21-jdk
+WORKDIR /app
+COPY HelloWorld.java .
+RUN javac HelloWorld.java
+CMD ["java", "HelloWorld"]
+```
+
+Why eclipse-temurin:21-jdk?
+The old openjdk:11 is deprecated. This is a modern, maintained alternative.
+
+---
+
+Step 3: Build the Docker image
+
+Open a terminal/command prompt inside the myapp folder and run:
+
+```bash
+docker build -t my-java-app:latest .
+```
+
+· -t my-java-app:latest gives the image a name and tag
+· The . means "use the Dockerfile in the current directory"
+
+Expected output: Successfully built ... and tagged my-java-app:latest
+
+---
+
+Step 4: Run the container from the image
+
+```bash
+docker run --name my-container my-java-app:latest
+```
+
+· --name my-container gives the container a name
+· my-java-app:latest is the image name
+
+Expected output: Hello from Docker!
+
+---
+
+Step 5: Verify the container ran (optional)
+
+```bash
+docker ps -a
+```
+
+You’ll see my-container with status Exited (0) – that means success.
+
+---
+
+What if you want to run the container in interactive mode?
+
+If you need to open a shell inside the container:
+
+```bash
+docker run -it my-java-app:latest /bin/bash
+```
+
+But for B1, just running the application is enough.
+
+---
+
+Quick checklist for exam:
+
+Action Command
+Build image docker build -t my-java-app:latest .
+Run container docker run --name my-container my-java-app:latest
+See running containers docker ps
+Stop container docker stop my-container
+Remove container docker rm my-container
+Remove image docker rmi my-java-app:latest
+
+---
+
+Common mistakes to avoid:
+
+❌ Using openjdk:11 → use eclipse-temurin:21-jdk instead
+❌ Forgetting the . at the end of docker build
+❌ Running docker run without building the image first
+❌ Docker daemon not running → start Docker Desktop before building
+
+---
+
+You’ve already fixed the openjdk error earlier, so your B1 should work now. Good luck!
